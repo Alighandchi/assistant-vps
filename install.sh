@@ -128,16 +128,9 @@ setupFakeWebSite(){
 wellcome(){
 
     clear
-    echo "+--------------------------------------------------------------------------------------------------------------+"
-    echo "|   ##     ####    ####    ####   ####   ######    ##     ##  ##   ######        ##  ##   #####    ####        |"
-    echo "|  ####   ##  ##  ##  ##    ##   ##  ##    ##     ####    ### ##     ##          ##  ##   ##  ##  ##  ##       |" 
-    echo "| ##  ##  ##      ##        ##   ##        ##    ##  ##   ######     ##          ##  ##   ##  ##  ##           |" 
-    echo "| ######   ####    ####     ##    ####     ##    ######   ######     ##   #####  ##  ##   #####    ####        |" 
-    echo "| ##  ##      ##      ##    ##       ##    ##    ##  ##   ## ###     ##          ##  ##   ##          ##       |" 
-    echo "| ##  ##  ##  ##  ##  ##    ##   ##  ##    ##    ##  ##   ##  ##     ##           ####    ##      ##  ## (2.3) |" 
-    echo "| ##  ##   ####    ####    ####   ####     ##    ##  ##   ##  ##     ##            ##     ##       ####        |"
-    echo "|                                     TG CHANNEL : @DVHOST_CLOUD                                               |"
-    echo "+--------------------------------------------------------------------------------------------------------------+"
+    echo "+------------------------------------+"
+    echo "|         منوی ابزارهای سرور          |"
+    echo "+------------------------------------+"
     echo -e "${GREEN}|Server Location:${NC} $SERVER_COUNTRY"
     echo -e "${GREEN}|Server IP:${NC} $SERVER_IP"
     echo -e "${GREEN}|Server ISP:${NC} $SERVER_ISP"
@@ -147,14 +140,14 @@ wellcome(){
     echo -e "$YELLOW|"
     echo -e "${BLUE}| 1  - Install Speedtest.net"
     echo -e "${BLUE}| 2  - Install Monitoring"
-    echo -e "${BLUE}| 3  - Install X-UI Panel                       ( Alireza , Sanaei , Vaxilu , FranzKafkaYu )"
+    echo -e "${BLUE}| 3  - Install 3X-UI Panel"
     echo -e "${BLUE}| 4  - Set DNS Google"
     echo -e "${BLUE}| 5  - Set DNS Shecan "
     echo -e "${BLUE}| 6  - Fix WhatsApp datetime"
     echo -e "${BLUE}| 7  - Disable IPv6"
-    echo -e "${BLUE}| 8  - Speedtest bench.io"
-    echo -e "${BLUE}| 9  - Remove IPtables Rules"
-    echo -e "${BLUE}| 10 - Install BBR v3"
+    echo -e "${BLUE}| 8  - Install BBR"
+    echo -e "${BLUE}| 9  - Install Certbot"
+    echo -e "${BLUE}| 10 - Install Namiun"
     echo -e "${BLUE}| 11 - Install WARP+"
     echo -e "${BLUE}| 12 - Speedtest ArvanCloud"
     echo -e "${BLUE}| 13 - Change SSH port"
@@ -188,13 +181,11 @@ wellcome(){
         sudo snap install btop
         ;;
     3)
-        rm x-ui_installer.sh
-        wget https://gist.githubusercontent.com/dev-ir/aef266871ca3945a662bd92bbf49b3ae/raw/d7b9ba940ac338c0e5816a84062de343c3eab742/x-ui_installer.sh
-        bash x-ui_installer.sh
+        bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
         ;;
     4)
         cp /etc/resolv.conf /etc/resolv-backup.conf 
-        rm -rf /etc/resolv.conf && touch /etc/resolv.conf && echo 'nameserver 8.8.8.8' >> /etc/resolv.conf && echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
+        rm -rf /etc/resolv.conf && touch /etc/resolv.conf && echo 'nameserver 8.8.8.8' >> /etc/resolv.conf && echo 'nameserver 8.8.4.4' >> /etc/resolv.conf
 
         echo "Google DNS Set."
 
@@ -220,19 +211,17 @@ wellcome(){
         echo "IPv6 has been disabled"
         ;;
     8)
-        wget -qO- bench.sh | bash
+        wget -N --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh && chmod +x bbr.sh && bash bbr.sh
         ;;
     9)
-        iptables -F
-        iptables -X
-        iptables -P INPUT ACCEPT
-        iptables -P FORWARD ACCEPT
-        iptables -P OUTPUT ACCEPT
+        apt install software-properties-common
+        add-apt-repository ppa:certbot/certbot
+        apt-get install certbot
 
-        echo "Rules iptable Removed."
+        echo "Certbot Instaled."
         ;;
     10)
-        curl -O https://raw.githubusercontent.com/jinwyp/one_click_script/master/install_kernel.sh && chmod +x ./install_kernel.sh && ./install_kernel.sh
+        curl https://raw.githubusercontent.com/malkemit/namizun/master/else/setup.sh | sudo bash
         ;;
 
     11)
