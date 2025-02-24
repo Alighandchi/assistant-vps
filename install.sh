@@ -34,13 +34,31 @@ loader() {
     SERVER_ISP=$(curl -sS "http://ip-api.com/json/$SERVER_IP" | jq -r '.isp')
 }
 
-install_speedtest() {
-    sudo apt-get update && sudo apt-get install -y wget
-    wget "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-x86_64.tgz"
-    tar -zxvf ookla-speedtest-1.2.0-linux-x86_64.tgz
-    cp speedtest /usr/bin
-    sleep .5
-    speedtest
+set_dns_cloudflare() {
+    cp /etc/resolv.conf /etc/resolv-backup.conf
+    rm -rf /etc/resolv.conf && touch /etc/resolv.conf
+    echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
+    echo 'nameserver 1.0.0.1' >> /etc/resolv.conf
+    echo 'nameserver 2606:4700:4700::1111' >> /etc/resolv.conf
+    echo 'nameserver 2606:4700:4700::1001' >> /etc/resolv.conf
+    echo "Cloudflare DNS has been set."
+}
+
+set_dns_google() {
+    cp /etc/resolv.conf /etc/resolv-backup.conf
+    rm -rf /etc/resolv.conf && touch /etc/resolv.conf
+    echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
+    echo 'nameserver 8.8.4.4' >> /etc/resolv.conf
+    echo 'nameserver 2001:4860:4860::8888' >> /etc/resolv.conf
+    echo 'nameserver 2001:4860:4860::8844' >> /etc/resolv.conf
+    echo "Google DNS has been set."
+}
+
+update_upgrade_server() {
+    echo "Updating and upgrading the server..."
+    sudo apt-get update
+    sudo apt-get upgrade -y
+    echo "Server updated and upgraded successfully."
 }
 
 change_ssh_port() {
@@ -69,51 +87,28 @@ change_ssh_port() {
     done
 }
 
-setupFakeWebSite() {
-    sudo apt-get update
-    sudo apt-get install unzip -y
+install_bbr() {
+    echo "Installing BBR..."
+    curl -O https://raw.githubusercontent.com/jinwyp/one_click_script/master/install_kernel.sh && chmod +x ./install_kernel.sh && ./install_kernel.sh
+    echo "BBR installed successfully."
+}
 
-    if ! command -v nginx &> /dev/null; then
-        echo "The Nginx software is not installed; the installation process has started."
-        if sudo apt-get install -y nginx; then
-            echo "Nginx was successfully installed."
-        else
-            echo "An error occurred during the Nginx installation process." >&2
-            exit 1
-        fi
-    else
-        echo "The Nginx software was already installed."
-    fi
+install_3x_ui() {
+    echo "Installing 3X-UI Panel..."
+    rm x-ui_installer.sh
+    wget https://gist.githubusercontent.com/dev-ir/aef266871ca3945a662bd92bbf49b3ae/raw/d7b9ba940ac338c0e5816a84062de343c3eab742/x-ui_installer.sh
+    bash x-ui_installer.sh
+    echo "3X-UI Panel installed successfully."
+}
 
-    cd /root || { echo "Failed to change directory to /root"; exit 1; }
-
-    if [[ -d "website-templates-master" ]]; then
-        echo "Removing existing 'website-templates-master' directory..."
-        rm -rf website-templates-master
-    fi
-
-    wget https://github.com/learning-zone/website-templates/archive/refs/heads/master.zip
-    unzip master.zip
-    rm master.zip
-    cd website-templates-master || { echo "Failed to change directory to randomfakehtml-master"; exit 1; }
-    rm -rf assets
-    rm ".gitattributes" "README.md" "_config.yml"
-
-    randomTemplate=$(a=(*); echo ${a[$((RANDOM % ${#a[@]}))]} 2>&1)
-    if [[ -n "$randomTemplate" ]]; then
-        echo "Random template name: ${randomTemplate}"
-    else
-        echo "No directories found to choose from."
-        exit 1
-    fi
-
-    if [[ -d "${randomTemplate}" && -d "/var/www/html/" ]]; then
-        sudo rm -rf /var/www/html/*
-        sudo cp -a "${randomTemplate}/." /var/www/html/
-        echo "Template extracted successfully!"
-    else
-        echo "Extraction error!"
-    fi
+install_certbot_ssl() {
+    echo "Installing Certbot SSL..."
+    read -p "Please enter your domain name (e.g., dns.fastspeed.cfd): " DOMAIN_NAME
+    sudo apt install software-properties-common -y
+    sudo add-apt-repository ppa:certbot/certbot -y
+    sudo apt-get install certbot -y
+    sudo certbot certonly --standalone --preferred-challenges http --agree-tos --email imobotech.bot@gmail.com -d "$DOMAIN_NAME"
+    echo "Certbot SSL installed successfully for domain: $DOMAIN_NAME"
 }
 
 menu() {
@@ -124,58 +119,34 @@ menu() {
     echo "| ##  ##  ##      ##        ##   ##        ##    ##  ##   ######     ##          ##  ##   # #  ##  ##           |"
     echo "| ######   ####    ####     ##    ####     ##    ######   ######     ##   #####  ##  ##   #####    ####        |"
     echo "| ##  ##      ##      # #    ##       ##    ##    ##  ##   ## ###     ##          ##  ##   ##          ##       |"
-    echo "| ##  ##  ##  ##  ##  ##    ##   ##  ##    ##    ##  ##   ##  ##     ##            ####    ##      ##  ## (2.5) |"
+    echo "| ##  ##  ##  ##  ##  ##    ##   ##  ##    ##    ##  ##   ##  ##     ##            ####    ##      ##  ## (1.0) |"
     echo "| ##  ##   ####    ####    ####   ####     ##    ##  ##   ##  ##     ##            ##     ##       ####        |"
     echo "+--------------------------------------------------------------------------------------------------------------+"
-    echo -e "|  Telegram Channel : ${YELLOW}@DVHOST_CLOUD ${NC} |  YouTube :  ${RED}youtube.com/@dvhost_cloud${NC}   |  Version : ${GREEN} 2.5${NC} "
+    echo -e "|  GitHub : ${YELLOW}github.com/Alighandchi ${NC} |   Version : ${GREEN} 1.0${NC} "
     echo "+--------------------------------------------------------------------------------------------------------------+"
     echo -e "${GREEN}|Server Location:${NC} $SERVER_COUNTRY"
     echo -e "${GREEN}|Server IP:${NC} $SERVER_IP"
     echo -e "${GREEN}|Server ISP:${NC} $SERVER_ISP"
     echo "+---------------------------------------------------------------------------------------------------------------+"
     echo -e "${YELLOW}"
-    echo -e "  ------- ${GREEN}Tools${YELLOW} ------- "
-    echo "|"
-    echo -e "|  1  - SpeedTest ookla"
-    echo -e "|  2  - Speedtest bench.io"
-    echo -e "|  3  - Speedtest ArvanCloud"
-    echo -e "|  4  - System Monitors"
-    echo "|"
     echo -e "  ------- ${GREEN}DNS Management${YELLOW} ------- "
     echo "|"
-    echo -e "|  5  - Set DNS Shecan"
-    echo -e "|  6  - Set DNS Google "
-    echo "|"
-    echo -e "  ------- ${GREEN}VPN Panels${YELLOW} ------- "
-    echo "|"
-    echo -e "|  7  - Install X-UI Panels"
-    echo -e "|  8  - Install Marzban Panel"
-    echo -e "|  9  - Auto SSL Marzban/X-UI (by @ErfJab)"
-    echo -e "|  10 - Auto Backup Marzban/X-UI (by @AC_Lover)"
-    echo -e "|  11 - Make Telegram Proxy (MTProto)"
-    echo "|"
-    echo -e "  ------- ${GREEN}Networking${YELLOW} ------- "
-    echo "|"
-    echo -e "|  12 - Disable IPv6"
-    echo -e "|  13 - Disable/Enable Ping Response"
-    echo -e "|  14 - Change source list IRAN"
+    echo -e "|  1  - Set DNS Cloudflare"
+    echo -e "|  2  - Set DNS Google"
     echo "|"
     echo -e "  ------- ${GREEN}System Management${YELLOW} ------- "
     echo "|"
-    echo -e "|  15 - Fix WhatsApp datetime"
-    echo -e "|  16 - Remove IPtables Rules"
-    echo -e "|  17 - Change SSH port"
-    echo -e "|  18 - Change Password SSH"
-    echo -e "|  19 - Update server and install dependences"
+    echo -e "|  3  - Update & Upgrade Server"
+    echo -e "|  4  - Change SSH Port"
+    echo -e "|  5  - Install BBR"
     echo "|"
-    echo -e "  ------- ${GREEN}Optimizations${YELLOW} ------- "
+    echo -e "  ------- ${GREEN}VPN Panels${YELLOW} ------- "
     echo "|"
-    echo -e "|  20 - Install BBR v3"
-    echo -e "|  21 - Install WARP+"
+    echo -e "|  6  - Install 3X-UI Panels"
     echo "|"
-    echo -e "  ------- ${GREEN}Web Server${YELLOW} ------- "
+    echo -e "  ------- ${GREEN}SSL Management${YELLOW} ------- "
     echo "|"
-    echo -e "|  22 - Install Nginx + Fake-WebSite Template [HTML]"
+    echo -e "|  7  - Install Certbot SSL"
     echo "|"
     echo -e "  ------- ${GREEN}Exit${YELLOW} ------- "
     echo "|"
@@ -186,84 +157,21 @@ menu() {
     read -p "Please choose an option: " choice
 
     case $choice in
-        1) install_speedtest ;;
-        2) wget -qO- bench.sh | bash ;;
-        3)
-            bash > /etc/resolv.conf && echo 'nameserver 185.51.200.2' >> /etc/resolv.conf
-            echo "Shecan DNS Set."
-        ;;
-        5)
-            cp /etc/resolv.conf /etc/resolv-backup.conf
-            rm -rf /etc/resolv.conf && touch /etc/resolv.conf && echo 'nameserver 178.22.122.100' >> /etc/resolv.conf && echo 'nameserver 185.51.200.2' >> /etc/resolv.conf
-            echo "Shecan DNS Set."
-        ;;
-        6)
-            cp /etc/resolv.conf /etc/resolv-backup.conf
-            rm -rf /etc/resolv.conf && touch /etc/resolv.conf && echo 'nameserver 8.8.8.8' >> /etc/resolv.conf && echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
-            echo "Google DNS Set."
-        ;;
-        7)
-            rm x-ui_installer.sh
-            wget https://gist.githubusercontent.com/dev-ir/aef266871ca3945a662bd92bbf49b3ae/raw/d7b9ba940ac338c0e5816a84062de343c3eab742/x-ui_installer.sh
-            bash x-ui_installer.sh
-        ;;
-        8)
-            sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
-            marzban cli admin create --sudo
-        ;;
-        9) sudo bash -c "$(curl -sL https://github.com/erfjab/ESSL/raw/main/essl.sh)";;
-        10) bash </dev/null;;
-        15)
-            sudo timedatectl set-timezone Asia/Tehran
-            echo "Time & Date Updated."
-        ;;
-        16)
-            iptables -F
-            iptables -X
-            iptables -P INPUT ACCEPT
-            iptables -P FORWARD ACCEPT
-            iptables -P OUTPUT ACCEPT
-            echo "Rules iptable Removed."
-        ;;
-        17) change_ssh_port ;;
-        18) sudo passwd ;;
-        19)
-            tput setaf 4
-            echo "🟦 Updating the server..."
-            apt update
-            while [ $(pgrep apt-get) -gt 0 ]; do
-                sleep 1
-            done
-            echo "🟦 Upgrading all packages..."
-            apt upgrade -y
-            apt install zenity tput
-            clear
-            packages=$(dpkg -l | grep "^ii" | awk '{print $2}')
-            tput setaf 2
-            echo "🟦 Packages to install:"
-            echo
-            for package in $packages; do
-                echo "   $package"
-            done
-            tput setaf 4
-            echo "🟦 Installing packages..."
-            for package in $packages; do
-                apt install -y $package
-            done
-            tput setaf 2
-            echo "🟩 Server update completed."
-            echo "🟦 Returning to main menu..."
-            clear
-        ;;
-        20) curl -O https://raw.githubusercontent.com/jinwyp/one_click_script/master/install_kernel.sh && chmod +x ./install_kernel.sh && ./install_kernel.sh ;;
-        21) wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh && bash menu.sh ;;
-        22) setupFakeWebSite ;;
+        1) set_dns_cloudflare ;;
+        2) set_dns_google ;;
+        3) update_upgrade_server ;;
+        4) change_ssh_port ;;
+        5) install_bbr ;;
+        6) install_3x_ui ;;
+        7) install_certbot_ssl ;;
         0)
             echo -e "${GREEN}Exiting program...${NC}"
             exit 0
         ;;
         *)
-            echo "Not valid"
+            echo "Invalid option. Please try again."
+            sleep 2
+            menu
         ;;
     esac
 }
