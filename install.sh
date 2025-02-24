@@ -89,7 +89,7 @@ change_ssh_port() {
 
 install_bbr() {
     echo "Installing BBR..."
-    curl -O https://raw.githubusercontent.com/jinwyp/one_click_script/master/install_kernel.sh && chmod +x ./install_kernel.sh && ./install_kernel.sh
+    wget -N --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh && chmod +x bbr.sh && bash bbr.sh
     echo "BBR installed successfully."
 }
 
